@@ -1,70 +1,94 @@
 import "./App.css";
 import { useState, useEffect } from "react";
 import { nanoid } from "nanoid";
+import TodoItem from "./components/TodoItem";
+import AddTodoForm from "./components/AddTodoForm";
+import EditForm from "./components/EditForm";
 
 function App() {
-  // state to keep track of the value in the input
-  const [input, setInput] = useState("");
 
-  // Getting local storage todos and setting into todos track
   const localTodos = () => {
     const savedTodos = localStorage.getItem("todos");
     if (savedTodos) {
-      // return the parsed JSON object back to Javascript object
       return JSON.parse(savedTodos);
     } else {
       return [];
     }
   };
 
-  // state to keep track of todos
+  const [todo, setTodo] = useState("");
   const [todos, setTodos] = useState(localTodos);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentTodo, setCurrentTodo] = useState({});
 
   useEffect(() => {
-    // localstorage only support storing strings as keys and values.
-    // JSON.stringify will convert the object into a JSON string.
     localStorage.setItem("todos", JSON.stringify(todos));
   }, [todos]);
 
-  // Function to create a new object on add button
-  const clickHandler = (event) => {
-    //prevent the browser default behavior or refreshing the page.
-    event.preventDefault();
+  function inputChangeHandler(e) {
+    setTodo(e.target.value);
+  }
 
-    //Don't submit if the input is an empty string
-    if (input !== "") {
-      setTodos([...todos, { id: nanoid(), input: input }]);
+  function editInputChangeHandler(e) {
+    setCurrentTodo({...currentTodo, text: e.target.value})
+  }
+
+  const submitClickHandler = (event) => {
+    event.preventDefault();
+    if (todo !== "") {
+      setTodos([...todos, { id: nanoid(), text: todo }]);
     }
-    setInput("");
+    setTodo("");
   };
 
-  function deleteClickHandler(id) {
-    
+  const editFormSubmit = (e) => {
+    e.preventDefault();
+    handleUpdateTodo(currentTodo.id, currentTodo);
+  };
+
+  const deleteClickHandler = (id) => {
     const removeItem = todos.filter((todo) => {
       return todo.id !== id;
     });
 
     setTodos(removeItem);
-  }
+  };
+
+  const handleUpdateTodo = (id, updatedTodo) => {
+    const updatedItem = todos.map((todo) => {
+      return todo.id === id ? updatedTodo : todo;
+    });
+    setIsEditing(false);
+    setTodos(updatedItem);
+  };
+
+  const editClickHandler = (todo) => {
+    setIsEditing(true);
+    setCurrentTodo({ ...todo });
+  };
 
   return (
     <>
-      <input
-        type="text"
-        value={input}
-        placeholder="Create new Todo"
-        onChange={(e) => setInput(e.target.value)}
-      />
-      <button onClick={clickHandler}>Add</button>
+      {isEditing ? (
+        <EditForm
+          currentTodo={currentTodo}
+          setIsEditing={setIsEditing}
+          editInputChangeHandler={editInputChangeHandler}
+          editFormSubmit={editFormSubmit}
+        />
+      ) : (
+        <AddTodoForm todo={todo} inputChangeHandler={inputChangeHandler} submitClickHandler={submitClickHandler} />
+      )}
       <div>
-        <ul>
+        <ol>
           {todos.map((todo) => (
-            <li key={todo.id}>
-              {todo.input}
-              <button onClick={() => deleteClickHandler(todo.id)}>Del</button>
-            </li>
+            <TodoItem
+              todo={todo}
+              editClickHandler={editClickHandler}
+              deleteClickHandler={deleteClickHandler}
+            />
           ))}
-        </ul>
+        </ol>
       </div>
     </>
   );
